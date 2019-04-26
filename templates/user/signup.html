@@ -1,0 +1,257 @@
+{% extends 'user/master.html' %}
+{% block CSS %}
+    <style>
+        .header {
+            padding: 10px;
+            font-size: 15px;
+            line-height: 120%;
+            text-align: left;
+            border-bottom: 1px solid #e2e2e2;
+            overflow: auto;
+        }
+
+        a:active {
+            color: #778087;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .sls {
+            border-radius: 3px;
+            padding: 5px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            width: 240px;
+        }
+
+        .problem {
+            padding: 10px;
+            font-size: 14px;
+            line-height: 120%;
+            text-align: left;
+            background-color: #ffffc0;
+            border-left: 5px solid #fff000;
+            border-bottom: 1px solid #e2e2e2;
+            color: #333;
+        }
+
+    </style>
+{% endblock %}
+{% block main %}
+    <div class="box">
+        <div class="header"><a href="{% url 'index' %}">V2EX</a> <span class="chevron">&nbsp;›&nbsp;</span> 注册</div>
+        {% if has_error %}
+            <div class="problem">请解决以下问题然后再提交：
+                <ul>
+                    {% if obj.errors.username.0 %}
+                        <li>{{ obj.errors.username.0 }}</li>
+                    {% endif %}
+                    {% if obj.errors.password.0 %}
+                        <li>{{ obj.errors.password.0 }}</li>
+                    {% endif %}
+                    {% if obj.errors.email.0 %}
+                        <li>{{ obj.errors.email.0 }}</li>
+                    {% endif %}
+                    {% if obj.errors.mobile.0 %}
+                        <li>{{ obj.errors.mobile.0 }}</li>
+                    {% endif %}
+                    {% if code_error %}
+                        <li>{{ code_error }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+        <div class="inner">
+            <form method="post" action="#" onsubmit="return check()">
+                {% csrf_token %}
+                <table cellpadding="5" cellspacing="0" border="0" width="100%">
+                    <tbody>
+                    <tr>
+                        <td width="120" align="right" valign="top">
+                            <div class="sep5"></div>
+                            用户名
+                        </td>
+                        <td width="auto" align="left">
+                            <input type="text" name="username" class="sls username">
+                            <div class="sep5"></div>
+                            <span>请使用半角的 a-z 或数字 0-9</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td width="120" align="right">密码</td>
+                        <td width="auto" align="left"><input type="password" name="password" class="sls password"><span></span></td>
+                    </tr>
+                    <tr>
+                        <td width="120" align="right" valign="top">
+                            <div class="sep5"></div>
+                            电子邮件
+                        </td>
+                        <td width="auto" align="left"><input type="text" name="email" class="sls email">
+                            <div class="sep5"></div>
+                            <span>请使用真实电子邮箱注册，我们不会将你的邮箱地址分享给任何人</span></td>
+                    </tr>
+                    <tr>
+                        <td width="120" align="right" valign="top">
+                            <div class="sep5"></div>
+                            国际电话区号
+                        </td>
+                        <td width="auto" align="left"><span>+86 中国 CN</span></td>
+                    </tr>
+                    <tr>
+                        <td width="120" align="right" valign="top">
+                            <div class="sep5"></div>
+                            手机号
+                        </td>
+                        <td width="auto" align="left"><input type="text" class="sls mobile" name="mobile">
+                            <span></span>
+                            <div class="sep5"></div>
+
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td width="120" align="right">你是机器人么？</td>
+                        <td width="auto" align="left"><img id="checkCode" src="{% url 'get_code' %}"
+                                                           style="width: 120px; height: 35px; border-radius: 3px; border: 1px solid #ccc;"/>
+                            <div class="sep10"></div>
+                            <input type="text" class="sls sms_code" name="check_code" value="" placeholder="请输入上图中的验证码"><span></span></td>
+                    </tr>
+
+                    <tr>
+                        <td width="120" align="right"></td>
+                        <td width="auto" align="left"><input type="submit" class="btn btn-sm btn-secondary" value="注册" onclick="return check()">
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block JS %}
+    <script>
+        $(function () {
+            var error_name = false;
+            var error_password = false;
+            var error_email = false;
+            var error_mobile = false;
+            var error_sms_code = false;
+
+            $("#checkCode").click(function () {
+                this.src += '?';
+            });
+
+            // 用户名检验
+            $('.username').change(function () {
+                check_username()
+            });
+
+            //　密码检验
+            $('.password').change(function () {
+                check_pwd()
+            });
+
+            //　邮箱检验
+            $('.email').change(function () {
+                check_email()
+            });
+
+            // 手机号检验
+            $('.mobile').change(function () {
+                check_mobile()
+            });
+
+            // 验证码检验
+            $('.sms_code').change(function () {
+                check_sms_code()
+            });
+
+            // 用户名检验
+            function check_username() {
+                var username = $('.username').val();
+                $.post('/user/check_username/', {'username': username}, function (data) {
+                    if (data.error == 0) {
+                        $('.username').next().next().hide();
+                    }
+                    else {
+                        $('.username').next().next().show();
+                        error_name = true;
+                    }
+                })
+            }
+
+            // 密码检验
+            function check_pwd() {
+                var len = $('.password').val().length;
+                if (len < 8 || len > 20) {
+                    $('.password').next().html('密码最少8位，最长20位').show();
+                    error_password = true;
+                }
+                else {
+                    $('.password').next().hide();
+                }
+            }
+
+            //　邮箱检验
+            function check_email() {
+                var re = /^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$/;
+
+                if (re.test($('.email').val())) {
+                    $('.email').next().next().hide();
+                }
+                else {
+                    $('.email').next().next().html('你输入的邮箱格式不正确').show();
+                    error_email = true;
+                }
+
+            }
+
+            // 手机号检验
+            function check_mobile() {
+                var mobile = $('.mobile').val();
+                $.post('/user/check_mobile/', {'mobile': mobile}, function (data) {
+                    if (data.error == 0) {
+                        $('.mobile').next().hide();
+                    }
+                    else {
+                        $('.mobile').next().html(data.msg).show();
+                        error_mobile = true;
+                    }
+                })
+            }
+
+            // 验证码校验
+            function check_sms_code() {
+                var sms_code = $('.sms_code').val();
+                $.post('/verify/check_code/', {'sms_code': sms_code}, function (data) {
+                    if (sms_code) {
+                        if (data.error == 0) { // 如果验证码正确
+                            $('.sms_code').next().hide();
+                        } else { // 如果验证码不正确
+                            $('.sms_code').next().html(data.msg).show();
+                        }
+                    }
+                    else {　　//　如果验证码不存在
+                        $('.sms_code').next().html(data.msg).show();
+                        error_sms_code = true;
+                    }
+                })
+            }
+
+            function check() {
+                check_username();
+                check_pwd();
+                check_email();
+                check_mobile();
+                if (error_name == false && error_password == false && error_email == false && error_mobile == false && error_sms_code == false) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+
+        })
+    </script>
+{% endblock %}
