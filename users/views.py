@@ -1,5 +1,8 @@
 import re
+from datetime import datetime
 
+import django_redis
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.generic import View
@@ -50,8 +53,10 @@ class SignupView(View):
         return render(request, 'user/signup.html')
 
     def post(self, request):
+        has_error = True
         obj = FormTable(request.POST)
         if obj.is_valid():
+            has_error = False
             username = obj.cleaned_data.get('username')
             password = obj.cleaned_data.get('password')
             email = obj.cleaned_data.get('email')
@@ -62,17 +67,47 @@ class SignupView(View):
             user.email = email
             user.mobile = mobile
             user.save()
-
             return render(request, 'user/signin.html')
         else:
-            return render(request, 'user/signin.html')
+            return render(request, 'user/signup.html', locals())  # TODO 我可以直接把所有的数据放这里，　不用传递ＪＳＯＮ数据了
 
 
 class SigninView(View):
     """登陆页面"""
 
-    def post(self, request):
+    def get(self, request):
         return render(request, 'user/signin.html')
+
+    def post(self, request):
+        has_error = True
+        sms_code = request.POST.get('check_code', None)
+        if sms_code:
+            # # 如果有验证码，　就和redis当中的进行验证
+            # redis_conn = django_redis.get_redis_connection('verify')
+            #
+            # # 先从数据库当中取验证码
+            # real_sms_code = redis_conn.get('sms_code')
+            # if sms_code.upper() != real_sms_code.decode().upper():
+            #     code_error = '验证码错误'
+            #
+            # print(request.POST.get('checkCode'))
+            obj = FormTable(request.POST)
+            if obj.is_valid():
+                username = obj.cleaned_data.get('username')
+                password = obj.cleaned_data.get('password')
+                user = UserProfile.objects.filter(Q(username=username) | Q(email=username)).first()
+                if user:
+                    if user.check_password(password):
+                        user.last_login = datetime.now()
+                        request.session['user_id'] = user.id
+                        print(request.session.session_key)
+                    else:
+                        user_error = '用户名或密码错误'
+                else:
+                    user_error = '用户不存在'
+        else:
+            code_error = '验证码不能为空'
+        return render(request, 'user/signin.html', locals())
 
 
 class SignoutView(View):

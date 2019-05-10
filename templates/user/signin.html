@@ -1,37 +1,40 @@
 {% extends 'user/master.html' %}
 {% block CSS %}
-<style>
-    .header {
-        padding: 10px;
-        font-size: 15px;
-        line-height: 120%;
-        text-align: left;
-        border-bottom: 1px solid #e2e2e2;
-        overflow: auto;
-    }
-    a:active {
-        color: #778087;
-        text-decoration: none;
-        word-break: break-all;
-    }
-    .sls {
-        border-radius: 3px;
-        padding: 5px;
-        font-size: 14px;
-        border: 1px solid #ccc;
-        width: 240px;
-    }
-    .problem {
-        padding: 10px;
-        font-size: 14px;
-        line-height: 120%;
-        text-align: left;
-        background-color: #ffffc0;
-        border-left: 5px solid #fff000;
-        border-bottom: 1px solid #e2e2e2;
-        color: #333;
-    }
-</style>
+    <style>
+        .header {
+            padding: 10px;
+            font-size: 15px;
+            line-height: 120%;
+            text-align: left;
+            border-bottom: 1px solid #e2e2e2;
+            overflow: auto;
+        }
+
+        a:active {
+            color: #778087;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .sls {
+            border-radius: 3px;
+            padding: 5px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            width: 240px;
+        }
+
+        .problem {
+            padding: 10px;
+            font-size: 14px;
+            line-height: 120%;
+            text-align: left;
+            background-color: #ffffc0;
+            border-left: 5px solid #fff000;
+            border-bottom: 1px solid #e2e2e2;
+            color: #333;
+        }
+    </style>
 {% endblock %}
 {% block main %}
     <div class="box">
@@ -67,21 +70,21 @@
                             <div class="sep5"></div>
                             用户名
                         </td>
-                        <td width="auto" align="left"><input type="text" name="username" class="sls"
+                        <td width="auto" align="left"><input type="text" name="username" class="sls username"
                                                              placeholder="用户名或者电子邮箱地址">
                             <div class="sep5"></div>
                         </td>
                     </tr>
                     <tr>
                         <td width="120" align="right">密码</td>
-                        <td width="auto" align="left"><input type="password" name="password" class="sls"></td>
+                        <td width="auto" align="left"><input type="password" name="password" class="sls password"></td>
                     </tr>
                     <tr>
                         <td width="120" align="right">你是机器人么？</td>
-                        <td width="auto" align="left"><img id="checkCode" src="{% url 'check_code' %}"
+                        <td width="auto" align="left"><img id="checkCode" src="{% url 'get_code' %}"
                                                            style="width: 120px; height: 35px; border-radius: 3px; border: 1px solid #ccc;"/>
                             <div class="sep10"></div>
-                            <input type="text" class="sls" name="check_code" value="" placeholder="请输入上图中的验证码"></td>
+                            <input type="text" class="sls sms_code" name="check_code" value="" placeholder="请输入上图中的验证码"><span></span></td>
                     </tr>
                     <tr>
                         <td width="120" align="right"></td>
@@ -101,8 +104,39 @@
 
 {% block JS %}
     <script>
-        $("#checkCode").click(function(){
-            this.src += '?'
-        });
+        $(function () {
+            $("#checkCode").click(function () {
+                this.src += '?'
+            });
+
+            // 验证码检验
+            $('.sms_code').change(function () {
+                check_sms_code()
+            });
+
+            $('.btn').submit(function () {
+                check_sms_code()
+            });
+
+            // 验证码校验
+            function check_sms_code() {
+                var sms_code = $('.sms_code').val();
+                $.post('/verify/check_code/', {'sms_code': sms_code}, function (data) {
+                    if (sms_code) {
+                        if (data.error == 0) { // 如果验证码正确
+                            $('.sms_code').next().hide();
+                        } else { // 如果验证码不正确
+                            $('.sms_code').next().html(data.msg).show();
+                        }
+                    }
+                    else {　　//　如果验证码不存在
+                        $('.sms_code').next().html(data.msg).show();
+                        error_sms_code = true;
+                    }
+                })
+            }
+
+
+        })
     </script>
 {% endblock %}
